@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/longhorn/longhorn-manager/k8s/pkg/apis/longhorn"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
@@ -23,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/klog/v2"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
+	kubevirt "kubevirt.io/api/core"
 )
 
 // ObjectLabelSelectorKey is a compact representation of an ObjectLabelSelector.
@@ -485,6 +487,34 @@ func resolveDeps(m meta.RESTMapper, objects []unstructuredv1.Unstructured, uids 
 			rmap, err = getPersistentVolumeClaimRelationships(node)
 			if err != nil {
 				klog.V(4).Infof("Failed to get relationships for persistentvolumeclaim named \"%s\" in namespace \"%s\": %s", node.Name, node.Namespace, err)
+				continue
+			}
+			// Populate dependencies & dependents based on Volume relationships
+		case node.Group == longhorn.GroupName && node.Kind == "Volume":
+			rmap, err = getLonghornVolumeRelationships(node)
+			if err != nil {
+				klog.V(4).Infof("Failed to get relationships for longhorn volume named \"%s\" in namespace \"%s\": %s", node.Name, node.Namespace, err)
+				continue
+			}
+			// Populate dependencies & dependents based on Replicas relationships
+		case node.Group == longhorn.GroupName && node.Kind == "Replica":
+			rmap, err = getLonghornReplicaRelationships(node)
+			if err != nil {
+				klog.V(4).Infof("Failed to get relationships for longhorn replica named \"%s\" in namespace \"%s\": %s", node.Name, node.Namespace, err)
+				continue
+			}
+			// Populate dependencies & dependents based on VM relationships
+		case node.Group == kubevirt.GroupName && node.Kind == "VirtualMachine":
+			rmap, err = getVMRelationships(node)
+			if err != nil {
+				klog.V(4).Infof("Failed to get relationships for vm named \"%s\" in namespace \"%s\": %s", node.Name, node.Namespace, err)
+				continue
+			}
+			// Populate dependencies & dependents based on VMI relationships
+		case node.Group == kubevirt.GroupName && node.Kind == "VirtualMachineInstance":
+			rmap, err = getVMIRelationships(node)
+			if err != nil {
+				klog.V(4).Infof("Failed to get relationships for vmi named \"%s\" in namespace \"%s\": %s", node.Name, node.Namespace, err)
 				continue
 			}
 		// Populate dependencies & dependents based on Pod relationships

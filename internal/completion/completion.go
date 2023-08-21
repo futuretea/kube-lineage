@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"k8s.io/kubectl/pkg/cmd/get"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
+	"k8s.io/kubectl/pkg/util/completion"
 )
 
 // filterString returns all strings from 's', except those with names matching
@@ -35,7 +35,7 @@ func filterString(s []string, ignored []string) []string {
 func GetScopeNamespaceList(f cmdutil.Factory, cmd *cobra.Command, toComplete string) []string {
 	var comp []string
 
-	allNS := get.CompGetResource(f, cmd, "namespace", "")
+	allNS := completion.CompGetResource(f, cmd, "namespace", "")
 	existingNS := strings.Split(toComplete, ",")
 	existingNS = existingNS[:len(existingNS)-1]
 	ignoreNS := existingNS

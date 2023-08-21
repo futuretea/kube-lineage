@@ -1,8 +1,10 @@
 package graph
 
 import (
+	"k8s.io/klog/v2"
 	"strings"
 
+	lhv1beta2 "github.com/longhorn/longhorn-manager/k8s/pkg/apis/longhorn/v1beta2"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
@@ -23,6 +25,7 @@ import (
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/apiserver/pkg/authentication/user"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
+	kubevirtv1 "kubevirt.io/api/core/v1"
 )
 
 // Well-known labels & annotations.
@@ -78,6 +81,19 @@ const (
 	RelationshipPersistentVolumeCSIDriver       Relationship = "PersistentVolumeCSIDriver"
 	RelationshipPersistentVolumeCSIDriverSecret Relationship = "PersistentVolumeCSIDriverSecret"
 	RelationshipPersistentVolumeStorageClass    Relationship = "PersistentVolumeStorageClass"
+
+	// Kubernetes Longhorn relationships.
+	RelationshipLonghornReplicaVolume               Relationship = "LonghornReplicaVolume"
+	RelationshipLonghornReplicaNode                 Relationship = "LonghornReplicaNode"
+	RelationshipLonghornVolumePersistentVolume      Relationship = "LonghornVolumePersistentVolume"
+	RelationshipLonghornVolumePersistentVolumeClaim Relationship = "LonghornVolumePersistentVolumeClaim"
+
+	RelationshipVMPersistentVolumeClaim       Relationship = "VMPersistentVolumeClaim"
+	RelationshipVMCloudInitSecret             Relationship = "VMCloudInitSecret"
+	RelationshipVMNetworkAttachmentDefinition Relationship = "VMNetworkAttachmentDefinition"
+	RelationshipVMINode                       Relationship = "VMINode"
+
+	RelationshipPersistentVolumeClaimVMImage Relationship = "PersistentVolumeClaimVMImage"
 
 	// Kubernetes Pod relationships.
 	RelationshipPodContainerEnv          Relationship = "PodContainerEnvironment"
@@ -518,7 +534,7 @@ func getPersistentVolumeRelationships(n *Node) (*RelationshipMap, error) {
 	// RelationshipPersistentVolumeClaim
 	if pvcRef := pv.Spec.ClaimRef; pvcRef != nil {
 		ref = ObjectReference{Kind: "PersistentVolumeClaim", Name: pvcRef.Name, Namespace: ns}
-		result.AddDependentByKey(ref.Key(), RelationshipPersistentVolumeClaim)
+		result.AddDependencyByKey(ref.Key(), RelationshipPersistentVolumeClaim)
 	}
 
 	// RelationshipPersistentVolumeCSIDriver
@@ -533,19 +549,19 @@ func getPersistentVolumeRelationships(n *Node) (*RelationshipMap, error) {
 		}
 		if ces := csi.ControllerExpandSecretRef; ces != nil {
 			ref = ObjectReference{Kind: "Secret", Name: ces.Name, Namespace: ces.Namespace}
-			result.AddDependentByKey(ref.Key(), RelationshipPersistentVolumeCSIDriverSecret)
+			result.AddDependencyByKey(ref.Key(), RelationshipPersistentVolumeCSIDriverSecret)
 		}
 		if cps := csi.ControllerPublishSecretRef; cps != nil {
 			ref = ObjectReference{Kind: "Secret", Name: cps.Name, Namespace: cps.Namespace}
-			result.AddDependentByKey(ref.Key(), RelationshipPersistentVolumeCSIDriverSecret)
+			result.AddDependencyByKey(ref.Key(), RelationshipPersistentVolumeCSIDriverSecret)
 		}
 		if nps := csi.NodePublishSecretRef; nps != nil {
 			ref = ObjectReference{Kind: "Secret", Name: nps.Name, Namespace: nps.Namespace}
-			result.AddDependentByKey(ref.Key(), RelationshipPersistentVolumeCSIDriverSecret)
+			result.AddDependencyByKey(ref.Key(), RelationshipPersistentVolumeCSIDriverSecret)
 		}
 		if nss := csi.NodeStageSecretRef; nss != nil {
 			ref = ObjectReference{Kind: "Secret", Name: nss.Name, Namespace: nss.Namespace}
-			result.AddDependentByKey(ref.Key(), RelationshipPersistentVolumeCSIDriverSecret)
+			result.AddDependencyByKey(ref.Key(), RelationshipPersistentVolumeCSIDriverSecret)
 		}
 	}
 
@@ -553,6 +569,12 @@ func getPersistentVolumeRelationships(n *Node) (*RelationshipMap, error) {
 	if sc := pv.Spec.StorageClassName; len(sc) > 0 {
 		ref = ObjectReference{Group: storagev1.GroupName, Kind: "StorageClass", Name: sc}
 		result.AddDependencyByKey(ref.Key(), RelationshipPersistentVolumeStorageClass)
+	}
+
+	// RelationshipLonghornVolumePersistentVolume
+	if pv.Annotations["pv.kubernetes.io/provisioned-by"] == "driver.longhorn.io" {
+		ref = ObjectReference{Kind: "Volume", Name: pv.Name, Namespace: "longhorn-system"}
+		result.AddDependentByKey(ref.Key(), RelationshipLonghornVolumePersistentVolume)
 	}
 
 	return &result, nil
@@ -575,7 +597,160 @@ func getPersistentVolumeClaimRelationships(n *Node) (*RelationshipMap, error) {
 	if pv := pvc.Spec.VolumeName; len(pv) > 0 {
 		ref = ObjectReference{Kind: "PersistentVolume", Name: pv}
 		result.AddDependencyByKey(ref.Key(), RelationshipPersistentVolumeClaim)
+		if pvc.Annotations["volume.kubernetes.io/storage-provisioner"] == "driver.longhorn.io" {
+			ref = ObjectReference{Kind: "Volume", Name: pv, Namespace: "longhorn-system"}
+			result.AddDependentByKey(ref.Key(), RelationshipLonghornVolumePersistentVolumeClaim)
+		}
 	}
+
+	if imageId := pvc.Annotations["harvesterhci.io/imageId"]; imageId != "" {
+		klog.V(4).Infof("Found imageId %s in PVC %s/%s", imageId, pvc.Namespace, pvc.Name)
+		nn := strings.SplitN(imageId, "/", 2)
+		ref = ObjectReference{Kind: "VirtualMachineImage", Name: nn[1], Namespace: nn[0]}
+		result.AddDependentByKey(ref.Key(), RelationshipPersistentVolumeClaimVMImage)
+	}
+
+	return &result, nil
+}
+
+// getLonghornVolumeRelationships returns a map of relationships that
+// this LonghornVolume has with other objects, based on what was
+// referenced in its manifest.
+func getLonghornVolumeRelationships(n *Node) (*RelationshipMap, error) {
+	var volume lhv1beta2.Volume
+	v := n.UnstructuredContent()
+	// remove size from spec to avoid error when converting to Volume
+	v["spec"].(map[string]interface{})["size"] = int64(0)
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(v, &volume)
+	if err != nil {
+		return nil, err
+	}
+
+	var ref ObjectReference
+	result := newRelationshipMap()
+
+	// RelationshipLonghornVolume
+	if pvName := volume.Status.KubernetesStatus.PVName; len(pvName) > 0 {
+		ref = ObjectReference{Kind: "PersistentVolume", Name: pvName}
+		result.AddDependencyByKey(ref.Key(), RelationshipLonghornVolumePersistentVolume)
+	}
+
+	if pvcName := volume.Status.KubernetesStatus.PVCName; len(pvcName) > 0 {
+		ref = ObjectReference{Kind: "PersistentVolumeClaim", Name: pvcName, Namespace: volume.Status.KubernetesStatus.Namespace}
+		result.AddDependencyByKey(ref.Key(), RelationshipLonghornVolumePersistentVolumeClaim)
+	}
+
+	return &result, nil
+}
+
+// getLonghornReplicaRelationships returns a map of relationships that
+// this LonghornReplica has with other objects, based on what was
+// referenced in its manifest.
+func getLonghornReplicaRelationships(n *Node) (*RelationshipMap, error) {
+	var replica lhv1beta2.Replica
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(n.UnstructuredContent(), &replica)
+	if err != nil {
+		return nil, err
+	}
+
+	var ref ObjectReference
+	result := newRelationshipMap()
+
+	// RelationshipLonghornReplica
+	if nodeName := replica.Spec.NodeID; len(nodeName) > 0 {
+		ref = ObjectReference{Kind: "Node", Name: nodeName}
+		result.AddDependencyByKey(ref.Key(), RelationshipLonghornReplicaNode)
+	}
+
+	if volumeName := replica.Spec.VolumeName; len(volumeName) > 0 {
+		ref = ObjectReference{Kind: "Volume", Name: volumeName, Namespace: "longhorn-system"}
+		result.AddDependencyByKey(ref.Key(), RelationshipLonghornReplicaVolume)
+	}
+
+	return &result, nil
+}
+
+// getVMRelationships returns a map of relationships that
+// this VM has with other objects, based on what was
+// referenced in its manifest.
+func getVMRelationships(n *Node) (*RelationshipMap, error) {
+	var vm kubevirtv1.VirtualMachine
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(n.UnstructuredContent(), &vm)
+	if err != nil {
+		return nil, err
+	}
+
+	var ref ObjectReference
+	result := newRelationshipMap()
+
+	// RelationshipVMPersistentVolumeClaim and RelationshipVMCloudInitSecret
+	volumes := vm.Spec.Template.Spec.Volumes
+	for _, volume := range volumes {
+		if volume.PersistentVolumeClaim != nil {
+			ref = ObjectReference{Kind: "PersistentVolumeClaim", Name: volume.PersistentVolumeClaim.ClaimName, Namespace: vm.Namespace}
+			result.AddDependentByKey(ref.Key(), RelationshipVMPersistentVolumeClaim)
+		}
+		if volume.CloudInitNoCloud != nil {
+			ref = ObjectReference{Kind: "Secret", Name: volume.CloudInitNoCloud.UserDataSecretRef.Name, Namespace: vm.Namespace}
+			result.AddDependentByKey(ref.Key(), RelationshipVMCloudInitSecret)
+			ref = ObjectReference{Kind: "Secret", Name: volume.CloudInitNoCloud.NetworkDataSecretRef.Name, Namespace: vm.Namespace}
+			result.AddDependentByKey(ref.Key(), RelationshipVMCloudInitSecret)
+		}
+	}
+
+	// RelationshipVMNetworkAttachmentDefinition
+	networks := vm.Spec.Template.Spec.Networks
+	for _, network := range networks {
+		if network.Multus != nil {
+			ref = ObjectReference{Kind: "NetworkAttachmentDefinition", Name: network.Multus.NetworkName, Namespace: vm.Namespace}
+			result.AddDependentByKey(ref.Key(), RelationshipVMNetworkAttachmentDefinition)
+		}
+	}
+
+	return &result, nil
+}
+
+// getVMIRelationships returns a map of relationships that
+// this VM has with other objects, based on what was
+// referenced in its manifest.
+func getVMIRelationships(n *Node) (*RelationshipMap, error) {
+	var vmi kubevirtv1.VirtualMachineInstance
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(n.UnstructuredContent(), &vmi)
+	if err != nil {
+		return nil, err
+	}
+
+	var ref ObjectReference
+	result := newRelationshipMap()
+
+	// RelationshipVMPersistentVolumeClaim and RelationshipVMCloudInitSecret
+	volumes := vmi.Spec.Volumes
+	for _, volume := range volumes {
+		if volume.PersistentVolumeClaim != nil {
+			ref = ObjectReference{Kind: "PersistentVolumeClaim", Name: volume.PersistentVolumeClaim.ClaimName, Namespace: vmi.Namespace}
+			result.AddDependentByKey(ref.Key(), RelationshipVMPersistentVolumeClaim)
+		}
+		if volume.CloudInitNoCloud != nil {
+			ref = ObjectReference{Kind: "Secret", Name: volume.CloudInitNoCloud.UserDataSecretRef.Name, Namespace: vmi.Namespace}
+			result.AddDependentByKey(ref.Key(), RelationshipVMCloudInitSecret)
+			ref = ObjectReference{Kind: "Secret", Name: volume.CloudInitNoCloud.NetworkDataSecretRef.Name, Namespace: vmi.Namespace}
+			result.AddDependentByKey(ref.Key(), RelationshipVMCloudInitSecret)
+		}
+	}
+
+	// RelationshipVMNetworkAttachmentDefinition
+	networks := vmi.Spec.Networks
+	for _, network := range networks {
+		if network.Multus != nil {
+			ref = ObjectReference{Kind: "NetworkAttachmentDefinition", Name: network.Multus.NetworkName, Namespace: vmi.Namespace}
+			result.AddDependentByKey(ref.Key(), RelationshipVMNetworkAttachmentDefinition)
+		}
+	}
+
+	// RelationshipVMINode
+	node := vmi.Status.NodeName
+	ref = ObjectReference{Kind: "Node", Name: node}
+	result.AddDependencyByKey(ref.Key(), RelationshipVMINode)
 
 	return &result, nil
 }

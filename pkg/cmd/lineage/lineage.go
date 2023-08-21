@@ -3,15 +3,14 @@ package lineage
 import (
 	"context"
 	"fmt"
+	"k8s.io/kubectl/pkg/util/completion"
 	"strings"
 
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/klog/v2"
-	"k8s.io/kubectl/pkg/cmd/get"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
-	"k8s.io/kubectl/pkg/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
 	"github.com/tohjustin/kube-lineage/internal/client"
@@ -78,7 +77,7 @@ func NewCmd(streams genericclioptions.IOStreams, name, parentCmdPath string) *co
 	}
 
 	f := cmdutil.NewFactory(o.ClientFlags)
-	util.SetFactoryForCompletion(f)
+	completion.SetFactoryForCompletion(f)
 
 	if len(name) > 0 {
 		cmdName = name
@@ -108,7 +107,7 @@ func NewCmd(streams genericclioptions.IOStreams, name, parentCmdPath string) *co
 			case 0:
 				comps = compGetResourceList(o, toComplete)
 			case 1:
-				comps = get.CompGetResource(f, cmd, args[0], toComplete)
+				comps = completion.CompGetResource(f, cmd, args[0], toComplete)
 			}
 			return comps, cobra.ShellCompDirectiveNoFileComp
 		},
