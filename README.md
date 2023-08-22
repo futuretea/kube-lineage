@@ -11,6 +11,27 @@ A CLI tool to display all dependencies or dependents of an object in a Kubernete
 ## Usage
 
 ```shell
+$ kube-lineage vm bar-new1 -A -owide
+NAMESPACE         NAME                                                                              READY   STATUS             AGE     RELATIONSHIPS
+default           VirtualMachine/bar-new1                                                           True                       2d17h   []
+default           ├── ControllerRevision/revision-start-vm-3860e1b8-074e-4621-8a1b-9fe5f44c17a5-2   -                          41h     [ControllerReference OwnerReference]
+default           ├── PersistentVolumeClaim/bar-new1-rootdisk-lskq0                                 -                          2d17h   [VMPersistentVolumeClaim]
+default           │   ├── Pod/virt-launcher-bar-new1-4r7f7                                          1/1     Running            95m     [PodVolume]
+default           │   │   ├── PodDisruptionBudget/kubevirt-disruption-budget-sxnlc                  -       InsufficientPods   95m     [PodDisruptionBudget]
+default           │   │   └── Service/kubernetes                                                    -                          16d     [Service]
+longhorn-system   │   └── Volume/pvc-797e1f58-22ad-4e6f-8073-c4227ba3db56                           -                          2d17h   [LonghornVolumePersistentVolumeClaim]
+longhorn-system   │       ├── Engine/pvc-797e1f58-22ad-4e6f-8073-c4227ba3db56-e-30773d88            -                          95m     [OwnerReference]
+longhorn-system   │       └── Replica/pvc-797e1f58-22ad-4e6f-8073-c4227ba3db56-r-93555ca9           -                          95m     [OwnerReference]
+default           ├── Secret/bar-new1-fqguk                                                         -                          2d17h   [OwnerReference VMCloudInitSecret]
+default           │   └── Pod/virt-launcher-bar-new1-4r7f7                                          1/1     Running            95m     [PodVolume]
+default           └── VirtualMachineInstance/bar-new1                                               True                       95m     [ControllerReference OwnerReference]
+default               ├── PersistentVolumeClaim/bar-new1-rootdisk-lskq0                             -                          2d17h   [VMPersistentVolumeClaim]
+default               ├── Pod/virt-launcher-bar-new1-4r7f7                                          1/1     Running            95m     [ControllerReference OwnerReference]
+default               ├── PodDisruptionBudget/kubevirt-disruption-budget-sxnlc                      -       InsufficientPods   95m     [ControllerReference OwnerReference]
+default               └── Secret/bar-new1-fqguk                                                     -                          2d17h   [VMCloudInitSecret]
+```
+
+```shell
 $ kube-lineage clusterrole system:metrics-server --output=wide
 NAMESPACE     NAME                                                               READY   STATUS    AGE   RELATIONSHIPS
               ClusterRole/system:metrics-server                                  -                 30m   []
@@ -156,6 +177,10 @@ List of supported relationships used for discovering dependent objects:
   - `node.k8s.io` APIs: [RuntimeClass](https://kubernetes.io/docs/reference/kubernetes-api/cluster-resources/runtime-class-v1/)
   - `rbac.authorization.k8s.io` APIs: [ClusterRole](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-v1/), [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/), [Role](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-v1/), [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/)
   - `storage.k8s.io` APIs: [CSINode](https://kubernetes.io/docs/reference/kubernetes-api/config-and-storage-resources/csi-node-v1/), [CSIStorageCapacity](https://kubernetes.io/docs/reference/kubernetes-api/config-and-storage-resources/csi-storage-capacity-v1beta1/), [StorageClass](https://kubernetes.io/docs/reference/kubernetes-api/config-and-storage-resources/storage-class-v1/), [VolumeAttachment](https://kubernetes.io/docs/reference/kubernetes-api/config-and-storage-resources/volume-attachment-v1/)
+  - `k8s.cni.cncf.io` APIs: NetworkAttachmentDefinition(TODO)
+  - `longhorn.io` APIs: Volume, Replica
+  - `kubevirt.io` APIs: VirtualMachine, VirtualMachineInstance, VirtualMachineMigration(TODO)
+  - `harvesterhci.io` APIs: VirtualMachineImage, VirtualMachineBackup(TODO), VirtualMachineRestore(TODO), KeyPair(TODO)
 - Helm
   - [Helm Release](https://helm.sh/docs/intro/using_helm/#three-big-concepts)
   - [Helm Storage](https://helm.sh/docs/topics/advanced/#storage-backends)
