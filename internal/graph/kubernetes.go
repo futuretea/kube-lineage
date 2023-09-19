@@ -1,7 +1,6 @@
 package graph
 
 import (
-	"k8s.io/klog/v2"
 	"strings"
 
 	lhv1beta2 "github.com/longhorn/longhorn-manager/k8s/pkg/apis/longhorn/v1beta2"
@@ -24,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/klog/v2"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	kubevirtv1 "kubevirt.io/api/core/v1"
 )
@@ -209,6 +209,7 @@ func getClusterRoleRelationships(n *Node) (*RelationshipMap, error) {
 // getClusterRoleBindingRelationships returns a map of relationships that this
 // ClusterRoleBinding has with other objects, based on what was referenced in
 // its manifest.
+//
 //nolint:gocognit
 func getClusterRoleBindingRelationships(n *Node) (*RelationshipMap, error) {
 	var crb rbacv1.ClusterRoleBinding
@@ -313,6 +314,7 @@ func getCSIStorageCapacityRelationships(n *Node) (*RelationshipMap, error) {
 
 // getEventRelationships returns a map of relationships that this Event has with
 // other objects, based on what was referenced in its manifest.
+//
 //nolint:unparam
 func getEventRelationships(n *Node) (*RelationshipMap, error) {
 	result := newRelationshipMap()
@@ -335,6 +337,7 @@ func getEventRelationships(n *Node) (*RelationshipMap, error) {
 
 // getIngressRelationships returns a map of relationships that this Ingress has
 // with other objects, based on what was referenced in its manifest.
+//
 //nolint:funlen,gocognit
 func getIngressRelationships(n *Node) (*RelationshipMap, error) {
 	var ref ObjectReference
@@ -603,9 +606,9 @@ func getPersistentVolumeClaimRelationships(n *Node) (*RelationshipMap, error) {
 		}
 	}
 
-	if imageId := pvc.Annotations["harvesterhci.io/imageId"]; imageId != "" {
-		klog.V(4).Infof("Found imageId %s in PVC %s/%s", imageId, pvc.Namespace, pvc.Name)
-		nn := strings.SplitN(imageId, "/", 2)
+	if imageID := pvc.Annotations["harvesterhci.io/imageId"]; imageID != "" {
+		klog.V(4).Infof("Found imageId %s in PVC %s/%s", imageID, pvc.Namespace, pvc.Name)
+		nn := strings.SplitN(imageID, "/", 2)
 		ref = ObjectReference{Kind: "VirtualMachineImage", Name: nn[1], Namespace: nn[0]}
 		result.AddDependentByKey(ref.Key(), RelationshipPersistentVolumeClaimVMImage)
 	}
@@ -757,6 +760,7 @@ func getVMIRelationships(n *Node) (*RelationshipMap, error) {
 
 // getPodRelationships returns a map of relationships that this Pod has with
 // other objects, based on what was referenced in its manifest.
+//
 //nolint:funlen,gocognit
 func getPodRelationships(n *Node) (*RelationshipMap, error) {
 	var pod corev1.Pod
@@ -970,6 +974,7 @@ func getRoleRelationships(n *Node) (*RelationshipMap, error) {
 // getRoleBindingRelationships returns a map of relationships that this
 // RoleBinding has with other objects, based on what was referenced in its
 // manifest.
+//
 //nolint:funlen,gocognit
 func getRoleBindingRelationships(n *Node) (*RelationshipMap, error) {
 	var rb rbacv1.RoleBinding
@@ -1164,6 +1169,7 @@ func getValidatingWebhookConfigurationRelationships(n *Node) (*RelationshipMap, 
 // getVolumeAttachmentRelationships returns a map of relationships that this
 // VolumeAttachment has with other objects, based on what was referenced in its
 // manifest.
+//
 //nolint:funlen,nestif
 func getVolumeAttachmentRelationships(n *Node) (*RelationshipMap, error) {
 	var va storagev1.VolumeAttachment

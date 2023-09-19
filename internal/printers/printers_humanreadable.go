@@ -186,6 +186,7 @@ func getAPIServiceReadyStatus(u *unstructuredv1.Unstructured) (string, string, e
 // getDaemonSetReadyStatus returns the ready & status value of a DaemonSet
 // which is based off the table cell values computed by printDaemonSet from
 // https://github.com/kubernetes/kubernetes/blob/v1.22.1/pkg/printers/internalversion/printers.go.
+//
 //nolint:unparam
 func getDaemonSetReadyStatus(u *unstructuredv1.Unstructured) (string, string, error) {
 	var ds appsv1.DaemonSet
@@ -203,6 +204,7 @@ func getDaemonSetReadyStatus(u *unstructuredv1.Unstructured) (string, string, er
 // getDeploymentReadyStatus returns the ready & status value of a Deployment
 // which is based off the table cell values computed by printDeployment from
 // https://github.com/kubernetes/kubernetes/blob/v1.22.1/pkg/printers/internalversion/printers.go.
+//
 //nolint:unparam
 func getDeploymentReadyStatus(u *unstructuredv1.Unstructured) (string, string, error) {
 	var deploy appsv1.Deployment
@@ -218,6 +220,7 @@ func getDeploymentReadyStatus(u *unstructuredv1.Unstructured) (string, string, e
 }
 
 // getEventCoreReadyStatus returns the ready & status value of a Event.
+//
 //nolint:unparam
 func getEventCoreReadyStatus(u *unstructuredv1.Unstructured) (string, string, error) {
 	var status string
@@ -236,6 +239,7 @@ func getEventCoreReadyStatus(u *unstructuredv1.Unstructured) (string, string, er
 }
 
 // getEventReadyStatus returns the ready & status value of a Event.events.k8s.io.
+//
 //nolint:unparam
 func getEventReadyStatus(u *unstructuredv1.Unstructured) (string, string, error) {
 	var status string
@@ -256,6 +260,7 @@ func getEventReadyStatus(u *unstructuredv1.Unstructured) (string, string, error)
 // getPodReadyStatus returns the ready & status value of a Pod which is based
 // off the table cell values computed by printPod from
 // https://github.com/kubernetes/kubernetes/blob/v1.22.1/pkg/printers/internalversion/printers.go.
+//
 //nolint:funlen,gocognit,gocyclo
 func getPodReadyStatus(u *unstructuredv1.Unstructured) (string, string, error) {
 	var pod corev1.Pod
@@ -336,6 +341,7 @@ func getPodReadyStatus(u *unstructuredv1.Unstructured) (string, string, error) {
 
 // getPodDisruptionBudgetReadyStatus returns the ready & status value of a
 // PodDisruptionBudget.
+//
 //nolint:unparam
 func getPodDisruptionBudgetReadyStatus(u *unstructuredv1.Unstructured) (string, string, error) {
 	var pdb policyv1.PodDisruptionBudget
@@ -358,6 +364,7 @@ func getPodDisruptionBudgetReadyStatus(u *unstructuredv1.Unstructured) (string, 
 // getReplicaSetReadyStatus returns the ready & status value of a ReplicaSet
 // which is based off the table cell values computed by printReplicaSet from
 // https://github.com/kubernetes/kubernetes/blob/v1.22.1/pkg/printers/internalversion/printers.go.
+//
 //nolint:unparam
 func getReplicaSetReadyStatus(u *unstructuredv1.Unstructured) (string, string, error) {
 	var rs appsv1.ReplicaSet
@@ -376,6 +383,7 @@ func getReplicaSetReadyStatus(u *unstructuredv1.Unstructured) (string, string, e
 // ReplicationController which is based off the table cell values computed by
 // printReplicationController from
 // https://github.com/kubernetes/kubernetes/blob/v1.22.1/pkg/printers/internalversion/printers.go.
+//
 //nolint:unparam
 func getReplicationControllerReadyStatus(u *unstructuredv1.Unstructured) (string, string, error) {
 	var rc corev1.ReplicationController
@@ -393,6 +401,7 @@ func getReplicationControllerReadyStatus(u *unstructuredv1.Unstructured) (string
 // getStatefulSetReadyStatus returns the ready & status value of a StatefulSet
 // which is based off the table cell values computed by printStatefulSet from
 // https://github.com/kubernetes/kubernetes/blob/v1.22.1/pkg/printers/internalversion/printers.go.
+//
 //nolint:unparam
 func getStatefulSetReadyStatus(u *unstructuredv1.Unstructured) (string, string, error) {
 	var sts appsv1.StatefulSet
@@ -436,6 +445,7 @@ func getVolumeAttachmentReadyStatus(u *unstructuredv1.Unstructured) (string, str
 }
 
 // nodeToTableRow converts the provided node into a table row.
+//
 //nolint:funlen,gocognit,goconst
 func nodeToTableRow(node *graph.Node, rset graph.RelationshipSet, namePrefix string, showGroupFn func(kind string) bool) metav1.TableRow {
 	var name, ready, status, age string

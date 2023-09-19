@@ -3,9 +3,10 @@ package helm
 import (
 	"context"
 	"fmt"
-	"k8s.io/kubectl/pkg/util/completion"
 	"os"
 	"strings"
+
+	"k8s.io/kubectl/pkg/util/completion"
 
 	"github.com/spf13/cobra"
 	"helm.sh/helm/v3/pkg/action"
@@ -187,6 +188,7 @@ func (o *CmdOptions) Validate() error {
 }
 
 // Run implements all the necessary functionality for the helm command.
+//
 //nolint:funlen,gocognit,gocyclo
 func (o *CmdOptions) Run() error {
 	ctx := context.Background()

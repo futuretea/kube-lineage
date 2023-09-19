@@ -307,6 +307,7 @@ func ResolveDependents(m meta.RESTMapper, objects []unstructuredv1.Unstructured,
 
 // resolveDeps resolves all dependencies or dependents of the provided objects
 // and returns a relationship tree.
+//
 //nolint:funlen,gocognit,gocyclo
 func resolveDeps(m meta.RESTMapper, objects []unstructuredv1.Unstructured, uids []types.UID, depsIsDependencies bool) (NodeMap, error) {
 	if len(uids) == 0 {

@@ -3,8 +3,9 @@ package lineage
 import (
 	"context"
 	"fmt"
-	"k8s.io/kubectl/pkg/util/completion"
 	"strings"
+
+	"k8s.io/kubectl/pkg/util/completion"
 
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/types"
@@ -189,6 +190,7 @@ func (o *CmdOptions) Validate() error {
 }
 
 // Run implements all the necessary functionality for the lineage command.
+//
 //nolint:funlen
 func (o *CmdOptions) Run() error {
 	ctx := context.Background()
