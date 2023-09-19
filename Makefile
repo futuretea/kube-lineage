@@ -1,8 +1,8 @@
 SHELL:=/bin/bash
 
-GO_VERSION = "1.17"
-GOLANGCI_LINT_VERSION = "1.42.1"
-GORELEASER_VERSION = "1.0.0"
+GO_VERSION = "1.18"
+GOLANGCI_LINT_VERSION = "1.54.2"
+GORELEASER_VERSION = "1.20.0"
 
 export BUILD_DATE = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 export GIT_COMMIT = $(shell git rev-parse HEAD)
@@ -10,7 +10,7 @@ export GIT_TREE_STATE = $(shell if [ -z "`git status --porcelain`" ]; then echo 
 export GIT_VERSION = $(shell git describe --tags --always | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+(-.*)?')
 export GIT_VERSION_MAJOR = $(shell if [[ "${GIT_VERSION}" ]]; then echo ${GIT_VERSION} | cut -d 'v' -f 2 | cut -d "." -f 1 ; fi)
 export GIT_VERSION_MINOR = $(shell if [[ "${GIT_VERSION}" ]]; then echo ${GIT_VERSION} | cut -d 'v' -f 2 | cut -d "." -f 2 ; fi)
-export CGO_ENABLED = 1
+export CGO_ENABLED = 0
 
 REPO = $(shell go list -m)
 GO_BUILD_ARGS = \
@@ -34,8 +34,12 @@ all: install
 clean:
 	rm -rf bin dist
 
+.PHONY: mod
+mod:
+	go mod tidy -v && go mod vendor -v
+
 .PHONY: lint
-lint:
+lint: mod
 	source ./scripts/fetch.sh; fetch golangci-lint $(GOLANGCI_LINT_VERSION) && ./bin/golangci-lint run
 
 .PHONY: test
@@ -43,8 +47,8 @@ test:
 	go test ./...
 
 .PHONY: build
-build:
-	go build $(GO_BUILD_ARGS) -o bin/kube-lineage ./cmd/kube-lineage
+build: mod
+	go build $(GO_BUILD_ARGS) -mod=vendor -o bin/kube-lineage ./cmd/kube-lineage
 
 .PHONY: install
 install: build
